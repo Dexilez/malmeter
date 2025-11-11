@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Malmetre — Mini IMDB</title>
+  <style>
+    :root{--bg:#f7fafc;--card:#ffffff;--accent:#ff9f1c;--muted:#64748b;--text:#1e293b}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:linear-gradient(180deg,#fefefe 0%, #e2e8f0 100%);color:var(--text);min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:40px}
+    .wrap{width:100%;max-width:980px}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+    header h1{margin:0;font-size:22px;color:#111827}
+    header p{margin:0;color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+    .card{position:relative;background:var(--card);padding:16px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.08);border:1px solid #e2e8f0;transition:transform .2s, box-shadow .2s}
+    .card:hover{transform:translateY(-4px);box-shadow:0 8px 18px rgba(0,0,0,0.1)}
+    .close-btn{position:absolute;top:8px;right:10px;background:transparent;border:none;font-size:18px;line-height:1;color:#9ca3af;cursor:pointer;transition:color .2s}
+    .close-btn:hover{color:#ef4444}
+    .row{display:flex;gap:12px;align-items:center}
+    .avatar{width:68px;height:68px;border-radius:8px;background:linear-gradient(135deg,#ffb84d,#ffeaa7);display:flex;align-items:center;justify-content:center;font-weight:700;color:#111;font-size:14px}
+    .meta{flex:1}
+    .name{font-weight:700;font-size:16px;margin-bottom:4px;color:#111827}
+    .company{font-size:13px;color:var(--muted)}
+    .score{display:flex;align-items:center;gap:10px;margin-top:12px}
+    .score .num{font-weight:800;font-size:20px;color:var(--accent)}
+    .bar{flex:1;height:10px;background:#f1f5f9;border-radius:999px;overflow:hidden}
+    .bar > i{display:block;height:100%;background:linear-gradient(90deg,#ffb84d,#ff6b6b);border-radius:999px}
+    .badge{font-size:12px;padding:6px 8px;border-radius:999px;background:#f1f5f9;color:var(--muted)}
+    .footer{margin-top:22px;padding:12px 14px;background:#f8fafc;border-radius:10px;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px;border:1px solid #e2e8f0}
+    .add-form{display:flex;gap:8px;margin-bottom:18px}
+    .add-form input, .add-form button{padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;background:var(--card);color:inherit}
+    .add-form input::placeholder{color:#94a3b8}
+    .add-form button{background:var(--accent);border:none;color:#fff;font-weight:700;cursor:pointer}
+    @media (max-width:480px){body{padding:16px} .avatar{width:56px;height:56px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Malmetre</h1>
+      </div>
+    </header>
+
+    <div class="add-form" role="search" aria-label="Yeni kayıt ekle">
+      <input id="inpName" placeholder="Rumuz" />
+      <input id="inpCompany" placeholder="Şirket" />
+      <input id="inpScore" placeholder="Malmetre (0-100)" style="width:110px" />
+      <button id="addBtn">Ekle</button>
+    </div>
+
+    <main class="grid" id="grid"></main>
+
+    <div class="footer">
+      <div>Toplam kayıt: <span id="count">0</span></div>
+      <div class="badge">Malmetre v3</div>
+    </div>
+  </div>
+
+<script>
+  const initial = [
+    {nick: 'Şarlatan', company: 'Malli', score: 97},
+    {nick: 'Soytarı', company: 'Malli', score: 82},
+    {nick: 'Köylü', company: 'Kamilli', score: 45}
+  ];
+
+  const grid = document.getElementById('grid');
+  const countEl = document.getElementById('count');
+
+  function render(items){
+    grid.innerHTML = '';
+    items.forEach((it, idx) => {
+      const card = document.createElement('article');
+      card.className = 'card';
+      const pct = Math.max(0, Math.min(100, Number(it.score) || 0));
+      const initials = (it.nick||'?').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase();
+      card.innerHTML = `
+        <button class="close-btn" data-idx="${idx}">&times;</button>
+        <div class="row">
+          <div class="avatar">${initials}</div>
+          <div class="meta">
+            <div class="name">${escapeHtml(it.nick)}</div>
+            <div class="company">${escapeHtml(it.company)}</div>
+            <div class="score">
+              <div class="num">${pct}/100</div>
+              <div class="bar" aria-hidden="true"><i style="width:${pct}%"></i></div>
+              <div class="badge">${ratingText(pct)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+    countEl.textContent = items.length;
+    document.querySelectorAll('.close-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const i = Number(e.target.dataset.idx);
+        items.splice(i,1);
+        render(items);
+      });
+    });
+  }
+
+  function ratingText(n){
+    if(n>=90) return 'Efsane';
+    if(n>=75) return 'Çok iyi';
+    if(n>=50) return 'Orta';
+    if(n>=25) return 'Zayıf';
+    return 'Felaket';
+  }
+
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  let items = initial.slice();
+  render(items);
+
+  document.getElementById('addBtn').addEventListener('click', ()=>{
+    const n = document.getElementById('inpName').value.trim();
+    const c = document.getElementById('inpCompany').value.trim();
+    const s = document.getElementById('inpScore').value.trim();
+    if(!n) return alert('Rumuz giriniz');
+    const num = Number(s);
+    if(s!=='' && (isNaN(num) || num<0 || num>100)) return alert('Malmetre 0-100 arasında olmalı');
+    items.unshift({nick:n, company:c||'—', score: s===''?0:num});
+    render(items);
+    document.getElementById('inpName').value='';
+    document.getElementById('inpCompany').value='';
+    document.getElementById('inpScore').value='';
+  });
+</script>
+</body>
+</html>
